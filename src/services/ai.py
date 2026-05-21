@@ -26,12 +26,17 @@ class AIService:
         try:
             system = user_context.strip() if user_context.strip() else _SYSTEM_DEFAULT
 
-            chat_history = []
-            for msg in history[:-1]:  # exclude the latest incoming (added below)
-                role = "user" if msg.direction == "incoming" else "model"
-                chat_history.append({"role": role, "parts": [msg.text]})
+            history_lines = []
+            for msg in history:
+                role = "User" if msg.direction == "incoming" else "You"
+                history_lines.append(f"{role}: {msg.text}")
 
-            prompt = f"{system}\n\nMessage to reply to: {incoming_text}"
+            history_block = "\n".join(history_lines)
+            if history_block:
+                prompt = f"{system}\n\nConversation:\n{history_block}\n\nReply to the last user message:"
+            else:
+                prompt = f"{system}\n\nMessage to reply to: {incoming_text}"
+
             response = await self._model.generate_content_async(prompt)
             return response.text.strip()
         except Exception as exc:
