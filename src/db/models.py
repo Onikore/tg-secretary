@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -15,7 +15,7 @@ class Connection(Base):
     user_id: Mapped[int] = mapped_column(Integer, nullable=False)
     can_reply: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class Settings(Base):
@@ -35,4 +35,4 @@ class MessageLog(Base):
     chat_id: Mapped[int] = mapped_column(Integer, nullable=False)
     direction: Mapped[str] = mapped_column(String, nullable=False)  # 'incoming' | 'outgoing'
     text: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
