@@ -1,6 +1,6 @@
 import logging
 
-import google.generativeai as genai
+from google import genai
 
 from ..db.models import MessageLog
 
@@ -13,9 +13,9 @@ _SYSTEM_DEFAULT = (
 
 
 class AIService:
-    def __init__(self, api_key: str, model: str = "gemini-1.5-flash") -> None:
-        genai.configure(api_key=api_key)
-        self._model = genai.GenerativeModel(model)
+    def __init__(self, api_key: str, model: str = "gemini-2.0-flash") -> None:
+        self._client = genai.Client(api_key=api_key)
+        self._model = model
 
     async def generate_reply(
         self,
@@ -37,7 +37,10 @@ class AIService:
             else:
                 prompt = f"{system}\n\nMessage to reply to: {incoming_text}"
 
-            response = await self._model.generate_content_async(prompt)
+            response = await self._client.aio.models.generate_content(
+                model=self._model,
+                contents=prompt,
+            )
             return response.text.strip()
         except Exception as exc:
             logger.error("Gemini error: %s", exc)
