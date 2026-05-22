@@ -68,6 +68,30 @@ async def test_get_recent_messages_respects_limit(repo):
     assert len(msgs) == 5
 
 
+async def test_set_active_chat(repo):
+    await repo.set_active_chat(42, "conn1", 100)
+    s = await repo.get_settings(42)
+    assert s.active_conn_id == "conn1"
+    assert s.active_chat_id == 100
+
+
+async def test_chat_context_set_get_clear(repo):
+    assert await repo.get_chat_context("conn1", 100) is None
+    await repo.set_chat_context("conn1", 100, "Be formal")
+    assert await repo.get_chat_context("conn1", 100) == "Be formal"
+    await repo.set_chat_context("conn1", 100, "Be casual")
+    assert await repo.get_chat_context("conn1", 100) == "Be casual"
+    await repo.clear_chat_context("conn1", 100)
+    assert await repo.get_chat_context("conn1", 100) is None
+
+
+async def test_chat_context_is_per_chat(repo):
+    await repo.set_chat_context("conn1", 100, "ctx A")
+    await repo.set_chat_context("conn1", 200, "ctx B")
+    assert await repo.get_chat_context("conn1", 100) == "ctx A"
+    assert await repo.get_chat_context("conn1", 200) == "ctx B"
+
+
 async def test_get_last_outgoing(repo):
     await repo.upsert_connection("conn1", 1, True, True)
     await repo.log_message("conn1", 100, "incoming", "hi")

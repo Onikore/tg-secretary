@@ -19,8 +19,10 @@ def bot():
 def repo():
     r = MagicMock()
     r.log_message = AsyncMock()
+    r.set_active_chat = AsyncMock()
     r.get_connection = AsyncMock()
     r.get_settings = AsyncMock()
+    r.get_chat_context = AsyncMock(return_value=None)
     r.get_recent_messages = AsyncMock(return_value=[])
     return r
 
@@ -133,6 +135,35 @@ async def test_always_logs_incoming(responder, message, repo, active_connection,
     repo.get_settings.return_value = default_settings
     await responder.handle(message, user_id=1)
     repo.log_message.assert_any_await("conn1", 100, "incoming", message.text)
+
+
+async def test_sets_active_chat_on_incoming(
+    responder, message, repo, active_connection, default_settings
+):
+    repo.get_connection.return_value = active_connection
+    repo.get_settings.return_value = default_settings
+    await responder.handle(message, user_id=1)
+    repo.set_active_chat.assert_any_await(1, "conn1", 100)
+
+
+async def test_per_chat_context_overrides_global(
+    responder, message, repo, ai, active_connection, default_settings
+):
+    repo.get_connection.return_value = active_connection
+    repo.get_settings.return_value = default_settings  # global: "I am a developer"
+    repo.get_chat_context.return_value = "Reply formally in English"
+    await responder.handle(message, user_id=1)
+    assert ai.generate_reply.await_args.args[1] == "Reply formally in English"
+
+
+async def test_falls_back_to_global_context(
+    responder, message, repo, ai, active_connection, default_settings
+):
+    repo.get_connection.return_value = active_connection
+    repo.get_settings.return_value = default_settings
+    repo.get_chat_context.return_value = None
+    await responder.handle(message, user_id=1)
+    assert ai.generate_reply.await_args.args[1] == "I am a developer"
 
 
 async def test_replies_to_media_message(

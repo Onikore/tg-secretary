@@ -55,6 +55,7 @@ class Responder:
         text: str = describe_message(message)
 
         await self._repo.log_message(conn_id, chat_id, "incoming", text)
+        await self._repo.set_active_chat(user_id, conn_id, chat_id)
 
         conn = await self._repo.get_connection(conn_id)
         if not conn or not conn.can_reply:
@@ -71,7 +72,9 @@ class Responder:
             return
 
         settings = await self._repo.get_settings(user_id)
-        reply = await self._ai.generate_reply(text, settings.ai_context, recent)
+        chat_context = await self._repo.get_chat_context(conn_id, chat_id)
+        context = chat_context or settings.ai_context
+        reply = await self._ai.generate_reply(text, context, recent)
         if not reply:
             return
 

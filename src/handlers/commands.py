@@ -40,7 +40,9 @@ def setup(dnd: DNDService, repo: Repository, owner_user_id: int) -> Router:
             "/quiet HH:MM HH:MM — auto-reply only in this window\n"
             "/quiet off — auto-reply any time (when /dnd on)\n"
             "/status — current status\n"
-            "/rules <text> — set AI context for replies"
+            "/rules <text> — set global AI context\n"
+            "/here <text> — set AI context for the active chat\n"
+            "/here off — clear the active chat's context"
         )
 
     @router.message(Command("dnd"))
@@ -69,8 +71,17 @@ def setup(dnd: DNDService, repo: Repository, owner_user_id: int) -> Router:
             window = f"{_fmt_min(settings.quiet_start_min)}-{_fmt_min(settings.quiet_end_min)}"
         else:
             window = "any time"
+        if settings.active_chat_id is not None:
+            chat_ctx = await repo.get_chat_context(
+                settings.active_conn_id, settings.active_chat_id
+            )
+            active = f"{settings.active_chat_id}"
+            active += " (custom context)" if chat_ctx else " (uses global)"
+        else:
+            active = "(none yet)"
         await message.answer(
-            f"DND: {state}\nQuiet hours: {window}\nAI context: {context}"
+            f"DND: {state}\nQuiet hours: {window}\n"
+            f"Active chat: {active}\nGlobal AI context: {context}"
         )
 
     @router.message(Command("rules"))
@@ -103,5 +114,26 @@ def setup(dnd: DNDService, repo: Repository, owner_user_id: int) -> Router:
                 )
                 return
         await message.answer("Usage: /quiet HH:MM HH:MM | /quiet off")
+
+    @router.message(Command("here"))
+    async def cmd_here(message: Message) -> None:
+        if not _is_owner(message):
+            return
+        settings = await repo.get_settings(message.from_user.id)
+        if settings.active_conn_id is None or settings.active_chat_id is None:
+            await message.answer("No active chat yet. It's set when someone messages you.")
+            return
+        parts = (message.text or "").split(maxsplit=1)
+        if len(parts) == 2 and parts[1].strip() == "off":
+            await repo.clear_chat_context(settings.active_conn_id, settings.active_chat_id)
+            await message.answer("Active chat context cleared. Falls back to /rules.")
+            return
+        if len(parts) < 2:
+            await message.answer("Usage: /here <context for the active chat> | /here off")
+            return
+        await repo.set_chat_context(
+            settings.active_conn_id, settings.active_chat_id, parts[1]
+        )
+        await message.answer("Context set for the active chat.")
 
     return router

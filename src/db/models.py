@@ -27,6 +27,16 @@ class Settings(Base):
     auto_filter_spam: Mapped[bool] = mapped_column(Boolean, default=True)
     quiet_start_min: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     quiet_end_min: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    active_conn_id: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    active_chat_id: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+
+
+class ChatContext(Base):
+    __tablename__ = "chat_context"
+
+    business_connection_id: Mapped[str] = mapped_column(String, primary_key=True)
+    chat_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ai_context: Mapped[str] = mapped_column(Text, default="")
 
 
 class MessageLog(Base):

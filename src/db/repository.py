@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from .models import Base, Connection, MessageLog, Settings
+from .models import Base, ChatContext, Connection, MessageLog, Settings
 
 
 class Repository:
@@ -53,6 +53,47 @@ class Repository:
             else:
                 session.add(Settings(user_id=user_id, dnd_enabled=enabled))
             await session.commit()
+
+    async def set_active_chat(self, user_id: int, conn_id: str, chat_id: int) -> None:
+        async with self._session() as session:
+            s = await session.get(Settings, user_id)
+            if s:
+                s.active_conn_id = conn_id
+                s.active_chat_id = chat_id
+            else:
+                session.add(
+                    Settings(
+                        user_id=user_id, active_conn_id=conn_id, active_chat_id=chat_id
+                    )
+                )
+            await session.commit()
+
+    async def get_chat_context(self, conn_id: str, chat_id: int) -> str | None:
+        async with self._session() as session:
+            c = await session.get(ChatContext, (conn_id, chat_id))
+            return c.ai_context if c else None
+
+    async def set_chat_context(self, conn_id: str, chat_id: int, context: str) -> None:
+        async with self._session() as session:
+            c = await session.get(ChatContext, (conn_id, chat_id))
+            if c:
+                c.ai_context = context
+            else:
+                session.add(
+                    ChatContext(
+                        business_connection_id=conn_id,
+                        chat_id=chat_id,
+                        ai_context=context,
+                    )
+                )
+            await session.commit()
+
+    async def clear_chat_context(self, conn_id: str, chat_id: int) -> None:
+        async with self._session() as session:
+            c = await session.get(ChatContext, (conn_id, chat_id))
+            if c:
+                await session.delete(c)
+                await session.commit()
 
     async def update_quiet_hours(
         self, user_id: int, start_min: int | None, end_min: int | None
