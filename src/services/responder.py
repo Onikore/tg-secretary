@@ -5,6 +5,29 @@ from .ai import AIService
 from .dnd import DNDService
 from .filter import is_spam
 
+_MEDIA_LABELS = [
+    ("voice", "voice message"),
+    ("video_note", "video note"),
+    ("audio", "audio"),
+    ("photo", "photo"),
+    ("video", "video"),
+    ("animation", "GIF"),
+    ("document", "document"),
+    ("sticker", "sticker"),
+    ("contact", "contact"),
+    ("location", "location"),
+]
+
+
+def describe_message(message) -> str:
+    text = message.text or getattr(message, "caption", None)
+    if text:
+        return text
+    for attr, label in _MEDIA_LABELS:
+        if getattr(message, attr, None):
+            return f"[{label}]"
+    return ""
+
 
 class Responder:
     def __init__(self, bot: Bot, repo: Repository, ai: AIService, dnd: DNDService) -> None:
@@ -16,7 +39,7 @@ class Responder:
     async def handle(self, message, user_id: int) -> None:
         conn_id: str = message.business_connection_id
         chat_id: int = message.chat.id
-        text: str = message.text or ""
+        text: str = describe_message(message)
 
         await self._repo.log_message(conn_id, chat_id, "incoming", text)
 

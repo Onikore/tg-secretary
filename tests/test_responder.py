@@ -1,9 +1,10 @@
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.db.models import Connection, Settings
-from src.services.responder import Responder
+from src.services.responder import Responder, describe_message
 
 
 @pytest.fixture
@@ -131,3 +132,34 @@ async def test_always_logs_incoming(responder, message, repo, active_connection,
     repo.get_settings.return_value = default_settings
     await responder.handle(message, user_id=1)
     repo.log_message.assert_any_await("conn1", 100, "incoming", message.text)
+
+
+async def test_replies_to_media_message(
+    responder, repo, bot, active_connection, default_settings
+):
+    media = MagicMock()
+    media.business_connection_id = "conn1"
+    media.chat.id = 100
+    media.text = None
+    media.caption = None
+    repo.get_connection.return_value = active_connection
+    repo.get_settings.return_value = default_settings
+    await responder.handle(media, user_id=1)
+    bot.send_message.assert_awaited_once()
+
+
+def test_describe_prefers_text():
+    assert describe_message(SimpleNamespace(text="hi there", caption=None)) == "hi there"
+
+
+def test_describe_uses_caption_when_no_text():
+    assert describe_message(SimpleNamespace(text=None, caption="nice pic")) == "nice pic"
+
+
+def test_describe_labels_voice():
+    msg = SimpleNamespace(text=None, caption=None, voice=SimpleNamespace())
+    assert describe_message(msg) == "[voice message]"
+
+
+def test_describe_empty_when_nothing():
+    assert describe_message(SimpleNamespace(text=None, caption=None)) == ""
