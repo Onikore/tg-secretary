@@ -3,6 +3,7 @@ import logging
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.types import BotCommand
 
 from src.config import config
 from src.db.repository import Repository
@@ -12,6 +13,15 @@ from src.services.dnd import DNDService
 from src.services.responder import Responder
 
 logger = logging.getLogger(__name__)
+
+_BOT_COMMANDS = [
+    BotCommand(command="status", description="Show current status"),
+    BotCommand(command="dnd", description="Toggle auto-reply: on | off"),
+    BotCommand(command="quiet", description="Quiet hours: HH:MM HH:MM | off"),
+    BotCommand(command="rules", description="Set global AI context"),
+    BotCommand(command="here", description="Set AI context for active chat | off"),
+    BotCommand(command="help", description="Show help"),
+]
 
 
 async def main() -> None:
@@ -25,7 +35,9 @@ async def main() -> None:
 
     session = AiohttpSession(proxy=config.proxy_url) if config.proxy_url else None
     bot = Bot(config.bot_token, session=session)
-    ai = AIService(config.gemini_api_key, proxy=config.proxy_url or None)
+    ai = AIService(
+        config.gemini_api_key, model=config.gemini_model, proxy=config.proxy_url or None
+    )
     dnd = DNDService(repo, tz_offset_min=config.tz_offset_min)
     responder = Responder(bot, repo, ai, dnd, cooldown_min=config.reply_cooldown_min)
 
@@ -34,7 +46,18 @@ async def main() -> None:
     dp.include_router(connection.setup(repo))
     dp.include_router(business.setup(responder, config.owner_user_id))
 
-    logger.info("Secretary bot starting (owner=%s)", config.owner_user_id)
+    logger.info(
+        "Secretary bot starting (owner=%s, model=%s, proxy=%s, cooldown=%smin, tz_offset=%smin)",
+        config.owner_user_id,
+        config.gemini_model,
+        config.proxy_url or "none",
+        config.reply_cooldown_min,
+        config.tz_offset_min,
+    )
+    try:
+        await bot.set_my_commands(_BOT_COMMANDS)
+    except Exception as exc:
+        logger.warning("Could not set bot commands: %s", exc)
     try:
         await dp.start_polling(bot)
     finally:

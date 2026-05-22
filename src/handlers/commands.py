@@ -5,6 +5,18 @@ from aiogram.types import Message
 from ..db.repository import Repository
 from ..services.dnd import DNDService
 
+HELP_TEXT = (
+    "Secretary bot is active.\n\n"
+    "/dnd on — enable auto-reply\n"
+    "/dnd off — disable auto-reply\n"
+    "/quiet HH:MM HH:MM — auto-reply only in this window\n"
+    "/quiet off — auto-reply any time (when /dnd on)\n"
+    "/rules <text> — set global AI context\n"
+    "/here <text> — set AI context for the active chat\n"
+    "/here off — clear the active chat's context\n"
+    "/status — current status"
+)
+
 
 def _parse_hhmm(value: str) -> int | None:
     parts = value.split(":")
@@ -29,21 +41,11 @@ def setup(dnd: DNDService, repo: Repository, owner_user_id: int) -> Router:
     def _is_owner(message: Message) -> bool:
         return bool(message.from_user and message.from_user.id == owner_user_id)
 
-    @router.message(Command("start"))
+    @router.message(Command("start", "help"))
     async def cmd_start(message: Message) -> None:
         if not _is_owner(message):
             return
-        await message.answer(
-            "Secretary bot is active.\n\n"
-            "/dnd on — enable auto-reply\n"
-            "/dnd off — disable auto-reply\n"
-            "/quiet HH:MM HH:MM — auto-reply only in this window\n"
-            "/quiet off — auto-reply any time (when /dnd on)\n"
-            "/status — current status\n"
-            "/rules <text> — set global AI context\n"
-            "/here <text> — set AI context for the active chat\n"
-            "/here off — clear the active chat's context"
-        )
+        await message.answer(HELP_TEXT)
 
     @router.message(Command("dnd"))
     async def cmd_dnd(message: Message) -> None:
