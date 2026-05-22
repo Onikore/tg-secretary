@@ -1,9 +1,10 @@
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.db.models import Connection, Settings
+from src.db.models import Connection, MessageLog, Settings
 from src.services.responder import Responder, describe_message
 
 
@@ -163,3 +164,42 @@ def test_describe_labels_voice():
 
 def test_describe_empty_when_nothing():
     assert describe_message(SimpleNamespace(text=None, caption=None)) == ""
+
+
+def _outgoing_at(when: datetime) -> MessageLog:
+    m = MessageLog()
+    m.created_at = when
+    return m
+
+
+async def test_no_reply_within_cooldown(
+    bot, repo, ai, dnd, message, active_connection, default_settings
+):
+    repo.get_connection.return_value = active_connection
+    repo.get_settings.return_value = default_settings
+    repo.get_last_outgoing = AsyncMock(return_value=_outgoing_at(datetime(2026, 1, 1, 12, 0)))
+    r = Responder(bot, repo, ai, dnd, cooldown_min=5, now=lambda: datetime(2026, 1, 1, 12, 2))
+    await r.handle(message, user_id=1)
+    bot.send_message.assert_not_awaited()
+
+
+async def test_reply_after_cooldown(
+    bot, repo, ai, dnd, message, active_connection, default_settings
+):
+    repo.get_connection.return_value = active_connection
+    repo.get_settings.return_value = default_settings
+    repo.get_last_outgoing = AsyncMock(return_value=_outgoing_at(datetime(2026, 1, 1, 12, 0)))
+    r = Responder(bot, repo, ai, dnd, cooldown_min=5, now=lambda: datetime(2026, 1, 1, 12, 10))
+    await r.handle(message, user_id=1)
+    bot.send_message.assert_awaited_once()
+
+
+async def test_reply_when_no_previous_outgoing(
+    bot, repo, ai, dnd, message, active_connection, default_settings
+):
+    repo.get_connection.return_value = active_connection
+    repo.get_settings.return_value = default_settings
+    repo.get_last_outgoing = AsyncMock(return_value=None)
+    r = Responder(bot, repo, ai, dnd, cooldown_min=5, now=lambda: datetime(2026, 1, 1, 12, 0))
+    await r.handle(message, user_id=1)
+    bot.send_message.assert_awaited_once()

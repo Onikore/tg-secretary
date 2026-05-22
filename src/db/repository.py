@@ -95,6 +95,18 @@ class Repository:
             )
             await session.commit()
 
+    async def get_last_outgoing(self, conn_id: str, chat_id: int) -> MessageLog | None:
+        async with self._session() as session:
+            result = await session.execute(
+                select(MessageLog)
+                .where(MessageLog.business_connection_id == conn_id)
+                .where(MessageLog.chat_id == chat_id)
+                .where(MessageLog.direction == "outgoing")
+                .order_by(MessageLog.id.desc())
+                .limit(1)
+            )
+            return result.scalars().first()
+
     async def get_recent_messages(
         self, conn_id: str, chat_id: int, limit: int = 10
     ) -> list[MessageLog]:

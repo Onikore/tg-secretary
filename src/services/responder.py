@@ -1,3 +1,6 @@
+from collections.abc import Callable
+from datetime import UTC, datetime
+
 from aiogram import Bot
 
 from ..db.repository import Repository
@@ -30,11 +33,21 @@ def describe_message(message) -> str:
 
 
 class Responder:
-    def __init__(self, bot: Bot, repo: Repository, ai: AIService, dnd: DNDService) -> None:
+    def __init__(
+        self,
+        bot: Bot,
+        repo: Repository,
+        ai: AIService,
+        dnd: DNDService,
+        cooldown_min: int = 0,
+        now: Callable[[], datetime] | None = None,
+    ) -> None:
         self._bot = bot
         self._repo = repo
         self._ai = ai
         self._dnd = dnd
+        self._cooldown_min = cooldown_min
+        self._now = now or (lambda: datetime.now(UTC).replace(tzinfo=None))
 
     async def handle(self, message, user_id: int) -> None:
         conn_id: str = message.business_connection_id
@@ -54,6 +67,9 @@ class Responder:
         if is_spam(text, recent):
             return
 
+        if self._cooldown_min > 0 and await self._in_cooldown(conn_id, chat_id):
+            return
+
         settings = await self._repo.get_settings(user_id)
         reply = await self._ai.generate_reply(text, settings.ai_context, recent)
         if not reply:
@@ -65,3 +81,10 @@ class Responder:
             business_connection_id=conn_id,
         )
         await self._repo.log_message(conn_id, chat_id, "outgoing", reply)
+
+    async def _in_cooldown(self, conn_id: str, chat_id: int) -> bool:
+        last = await self._repo.get_last_outgoing(conn_id, chat_id)
+        if last is None:
+            return False
+        elapsed = (self._now() - last.created_at).total_seconds()
+        return elapsed < self._cooldown_min * 60

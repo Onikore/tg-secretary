@@ -8,6 +8,7 @@ class Config(BaseSettings):
     db_path: str = "data/bot.db"
     tz_offset_min: int = 0
     proxy_url: str = ""
+    reply_cooldown_min: int = 0
 
     model_config = {"env_file": ".env"}
 

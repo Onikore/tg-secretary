@@ -27,7 +27,7 @@ async def main() -> None:
     bot = Bot(config.bot_token, session=session)
     ai = AIService(config.gemini_api_key, proxy=config.proxy_url or None)
     dnd = DNDService(repo, tz_offset_min=config.tz_offset_min)
-    responder = Responder(bot, repo, ai, dnd)
+    responder = Responder(bot, repo, ai, dnd, cooldown_min=config.reply_cooldown_min)
 
     dp = Dispatcher()
     dp.include_router(commands.setup(dnd, repo, config.owner_user_id))

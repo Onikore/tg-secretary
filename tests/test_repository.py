@@ -68,6 +68,21 @@ async def test_get_recent_messages_respects_limit(repo):
     assert len(msgs) == 5
 
 
+async def test_get_last_outgoing(repo):
+    await repo.upsert_connection("conn1", 1, True, True)
+    await repo.log_message("conn1", 100, "incoming", "hi")
+    await repo.log_message("conn1", 100, "outgoing", "first")
+    await repo.log_message("conn1", 100, "outgoing", "second")
+    last = await repo.get_last_outgoing("conn1", 100)
+    assert last.text == "second"
+
+
+async def test_get_last_outgoing_none_when_no_outgoing(repo):
+    await repo.upsert_connection("conn1", 1, True, True)
+    await repo.log_message("conn1", 100, "incoming", "hi")
+    assert await repo.get_last_outgoing("conn1", 100) is None
+
+
 async def test_get_recent_messages_returns_last_n_in_order(repo):
     await repo.upsert_connection("conn1", 1, True, True)
     for i in range(15):
