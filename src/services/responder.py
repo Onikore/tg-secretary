@@ -58,7 +58,7 @@ class Responder:
         await self._repo.set_active_chat(user_id, conn_id, chat_id)
 
         conn = await self._repo.get_connection(conn_id)
-        if not conn or not conn.can_reply:
+        if not conn or not conn.is_active or not conn.can_reply:
             return
 
         if not await self._dnd.is_enabled(user_id):
