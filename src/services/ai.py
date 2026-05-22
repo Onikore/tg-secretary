@@ -1,6 +1,7 @@
 import logging
 
 from google import genai
+from google.genai import types
 
 from ..db.models import MessageLog
 
@@ -13,8 +14,13 @@ _SYSTEM_DEFAULT = (
 
 
 class AIService:
-    def __init__(self, api_key: str, model: str = "gemini-2.0-flash") -> None:
-        self._client = genai.Client(api_key=api_key)
+    def __init__(
+        self, api_key: str, model: str = "gemini-2.0-flash", proxy: str | None = None
+    ) -> None:
+        http_options = (
+            types.HttpOptions(async_client_args={"proxy": proxy}) if proxy else None
+        )
+        self._client = genai.Client(api_key=api_key, http_options=http_options)
         self._model = model
 
     async def generate_reply(

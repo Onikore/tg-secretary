@@ -66,3 +66,11 @@ async def test_get_recent_messages_respects_limit(repo):
         await repo.log_message("conn1", 100, "incoming", f"msg {i}")
     msgs = await repo.get_recent_messages("conn1", 100, limit=5)
     assert len(msgs) == 5
+
+
+async def test_get_recent_messages_returns_last_n_in_order(repo):
+    await repo.upsert_connection("conn1", 1, True, True)
+    for i in range(15):
+        await repo.log_message("conn1", 100, "incoming", f"msg {i}")
+    msgs = await repo.get_recent_messages("conn1", 100, limit=5)
+    assert [m.text for m in msgs] == ["msg 10", "msg 11", "msg 12", "msg 13", "msg 14"]

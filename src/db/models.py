@@ -25,6 +25,8 @@ class Settings(Base):
     dnd_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     ai_context: Mapped[str] = mapped_column(Text, default="")
     auto_filter_spam: Mapped[bool] = mapped_column(Boolean, default=True)
+    quiet_start_min: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    quiet_end_min: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
 
 
 class MessageLog(Base):

@@ -54,6 +54,24 @@ class Repository:
                 session.add(Settings(user_id=user_id, dnd_enabled=enabled))
             await session.commit()
 
+    async def update_quiet_hours(
+        self, user_id: int, start_min: int | None, end_min: int | None
+    ) -> None:
+        async with self._session() as session:
+            s = await session.get(Settings, user_id)
+            if s:
+                s.quiet_start_min = start_min
+                s.quiet_end_min = end_min
+            else:
+                session.add(
+                    Settings(
+                        user_id=user_id,
+                        quiet_start_min=start_min,
+                        quiet_end_min=end_min,
+                    )
+                )
+            await session.commit()
+
     async def update_ai_context(self, user_id: int, context: str) -> None:
         async with self._session() as session:
             s = await session.get(Settings, user_id)
@@ -85,7 +103,7 @@ class Repository:
                 select(MessageLog)
                 .where(MessageLog.business_connection_id == conn_id)
                 .where(MessageLog.chat_id == chat_id)
-                .order_by(MessageLog.created_at.asc())
+                .order_by(MessageLog.id.desc())
                 .limit(limit)
             )
-            return list(result.scalars().all())
+            return list(reversed(result.scalars().all()))
