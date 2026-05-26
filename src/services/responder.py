@@ -1,7 +1,10 @@
+import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
 
 from aiogram import Bot
+
+logger = logging.getLogger(__name__)
 
 from ..db.repository import Repository
 from .ai import AIService
@@ -57,18 +60,30 @@ class Responder:
         await self._repo.log_message(conn_id, chat_id, "incoming", text)
         await self._repo.set_active_chat(user_id, conn_id, chat_id)
 
+        logger.info("Incoming: conn=%s chat=%s text=%r", conn_id, chat_id, text[:80])
+
         conn = await self._repo.get_connection(conn_id)
-        if not conn or not conn.is_active or not conn.can_reply:
+        if not conn:
+            logger.warning("Skip: connection %s not in DB (reconnect bot in Telegram settings)", conn_id)
+            return
+        if not conn.is_active:
+            logger.warning("Skip: connection %s is_active=False", conn_id)
+            return
+        if not conn.can_reply:
+            logger.warning("Skip: connection %s can_reply=False (Telegram Settings → Business → Chatbots → enable Reply)", conn_id)
             return
 
         if not await self._dnd.is_enabled(user_id):
+            logger.info("Skip: DND is off for user %s (send /dnd on)", user_id)
             return
 
         recent = await self._repo.get_recent_messages(conn_id, chat_id)
         if is_spam(text, recent):
+            logger.info("Skip: spam filter triggered for chat %s", chat_id)
             return
 
         if self._cooldown_min > 0 and await self._in_cooldown(conn_id, chat_id):
+            logger.info("Skip: cooldown active for chat %s", chat_id)
             return
 
         settings = await self._repo.get_settings(user_id)
@@ -76,6 +91,7 @@ class Responder:
         context = chat_context or settings.ai_context
         reply = await self._ai.generate_reply(text, context, recent)
         if not reply:
+            logger.warning("No reply generated for chat %s (Gemini returned empty)", chat_id)
             return
 
         await self._bot.send_message(

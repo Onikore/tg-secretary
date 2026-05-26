@@ -4,7 +4,7 @@ Telegram Business secretary bot. Auto-replies to incoming business messages with
 
 ## Requirements
 
-- Python 3.14+
+- Python 3.12+
 - Telegram Premium (required to connect a business bot)
 - Google Gemini API key
 - Optional: SOCKS5 proxy if Telegram or Gemini are blocked on your network
@@ -18,9 +18,17 @@ Telegram Business secretary bot. Auto-replies to incoming business messages with
 
 ## Install
 
+**Linux / macOS**
+```bash
+python3 -m venv venv
+venv/bin/pip install -r requirements.txt
+cp .env.example .env
+```
+
+**Windows**
 ```powershell
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
+python -m venv venv
+venv\Scripts\python.exe -m pip install -r requirements.txt
 copy .env.example .env
 ```
 
@@ -33,7 +41,7 @@ Edit `.env` with the values from the Telegram setup step.
 | `BOT_TOKEN`          | yes      |                      | From @BotFather |
 | `GEMINI_API_KEY`     | yes      |                      | From Google AI Studio |
 | `OWNER_USER_ID`      | yes      |                      | Your Telegram numeric id |
-| `GEMINI_MODEL`       | no       | `gemini-2.0-flash`   | Any Gemini model name |
+| `GEMINI_MODEL`       | no       | `gemini-2.5-flash`   | Any Gemini model name |
 | `DB_PATH`            | no       | `data/bot.db`        | SQLite file path |
 | `TZ_OFFSET_MIN`      | no       | `0`                  | Local-time offset for `/quiet`, minutes from UTC |
 | `PROXY_URL`          | no       | (none)               | e.g. `socks5://127.0.0.1:10808` |
@@ -41,8 +49,14 @@ Edit `.env` with the values from the Telegram setup step.
 
 ## Run
 
+**Linux / macOS**
+```bash
+venv/bin/python main.py
+```
+
+**Windows**
 ```powershell
-.venv\Scripts\python.exe main.py
+venv\Scripts\python.exe main.py
 ```
 
 ## Owner commands
@@ -63,8 +77,9 @@ DM these to the bot (only the configured owner is allowed).
 
 ## Tests
 
-```powershell
-.venv\Scripts\python.exe -m pytest
+```bash
+venv/bin/python -m pytest   # Linux/macOS
+venv\Scripts\python.exe -m pytest   # Windows
 ```
 
 ## Project layout

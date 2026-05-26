@@ -29,6 +29,7 @@ class AIService:
         user_context: str,
         history: list[MessageLog],
     ) -> str | None:
+        logger.info("Gemini request: model=%s text=%r", self._model, incoming_text[:120])
         try:
             system = user_context.strip() if user_context.strip() else _SYSTEM_DEFAULT
 
@@ -47,7 +48,9 @@ class AIService:
                 model=self._model,
                 contents=prompt,
             )
-            return response.text.strip()
+            reply = response.text.strip()
+            logger.info("Gemini reply: %r", reply[:120])
+            return reply
         except Exception as exc:
-            logger.error("Gemini error: %s", exc)
+            logger.error("Gemini error: %s", exc, exc_info=True)
             return None
